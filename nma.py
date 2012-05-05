@@ -1,8 +1,8 @@
 # Author: sitaktif <romainchossart AT gmail DOT com>
 # This plugin calls the pynma bindings via python when somebody says your
 # nickname, sends you a query, etc.
-# 
-# Requires: 
+#
+# Requires:
 # Weechat 0.3.0
 # pynma.py (NMA python bindings) - get it on NMA website, on Github as a
 #   standalone or just use https://github.com/sitaktif/weechat_plugins_nma which
@@ -13,7 +13,9 @@
 #
 # Acknowledgements: Based on lavaramano's script "notify.py" v. 0.0.5 (thanks!)
 #
-# 2012-01-05 Ac-town
+# 2012-05-05, sitaktif
+#     version 1.0.3: Manage (non-ASCII) UTF8 chars
+# 2012-01-05, Ac-town
 #     version 1.0.2: Fixes a few typos I ran into and adds only_away. Only_away only sends notifications if you are marked away.
 # 2011-09-19, sitaktif
 #     version 1.0.1: Corrected a bug with debug functions
@@ -22,12 +24,11 @@
 #
 # Todo:
 # - Do not send my own messages on query channels
-# - Manage non-ascii chars (encode/decode...)
 # - Add an option to try to fit the message in the title (using "push").
 
 import weechat
 
-weechat.register("nma", "sitaktif", "1.0.2", "GPL2", "nma: Receive notifications on NotifyMyAndroid app.", "", "")
+weechat.register("nma", "sitaktif", "1.0.3", "GPL2", "nma: Receive notifications on NotifyMyAndroid app.", "", "")
 
 # script options
 settings = {
@@ -97,7 +98,7 @@ Functions
 
 def nma_cmd_cb(data, buffer, args):
     if args in ["on", "off"]:
-        weechat.prnt("", "Notify My Android notifications %sactivated" 
+        weechat.prnt("", "Notify My Android notifications %sactivated"
                 % ("de" if args == "off" else ""))
         weechat.config_set_plugin('activated', args)
     else:
@@ -123,8 +124,11 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
 
     ret = None
 
-    notif_body = "%s%s%s%s" % (weechat.config_get_plugin('nick_separator_left'), 
-            prefix, weechat.config_get_plugin('nick_separator_right'), message)
+    notif_body = "%s%s%s%s" % (
+            weechat.config_get_plugin('nick_separator_left').decode('utf-8'),
+            prefix.decode('utf-8'),
+            weechat.config_get_plugin('nick_separator_right').decode('utf-8'),
+            message.decode('utf-8'))
 
     # PM (query)
     if (weechat.buffer_get_string(bufferp, "localvar_type") == "private" and
