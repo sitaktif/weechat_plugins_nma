@@ -13,10 +13,14 @@
 #
 # Acknowledgements: Based on lavaramano's script "notify.py" v. 0.0.5 (thanks!)
 #
+# 2012-05-06, sitaktif
+#     version 1.0.4: Add an option to send everything in push. Also change
+#     default delimiters with brackets and make lines 80 chars wide.
 # 2012-05-05, sitaktif
 #     version 1.0.3: Manage (non-ASCII) UTF8 chars
 # 2012-01-05, Ac-town
-#     version 1.0.2: Fixes a few typos I ran into and adds only_away. Only_away only sends notifications if you are marked away.
+#     version 1.0.2: Fixes a few typos I ran into and adds only_away. Only_away
+#     only sends notifications if you are marked away.
 # 2011-09-19, sitaktif
 #     version 1.0.1: Corrected a bug with debug functions
 # 2011-07-22, sitaktif
@@ -24,22 +28,24 @@
 #
 # Todo:
 # - Do not send my own messages on query channels
-# - Add an option to try to fit the message in the title (using "push").
+# - Add help on options properly with weechat_config_set_desc_plugin
 
 import weechat
 
-weechat.register("nma", "sitaktif", "1.0.3", "GPL2", "nma: Receive notifications on NotifyMyAndroid app.", "", "")
+weechat.register("nma", "sitaktif", "1.0.4", "GPL2",
+    "nma: Receive notifications on NotifyMyAndroid app.", "", "")
 
 # script options
 settings = {
     "apikey"               : "",
-    "nick_separator_left"  : "<",
-    "nick_separator_right" : "> ",
+    "nick_separator_left"  : "(",
+    "nick_separator_right" : ") ",
     "emergency_hilights"   : "-1",
     "emergency_priv_msg"   : "0",
     "activated"            : "on",
     "show_hilights"        : "on",
     "show_priv_msg"        : "on",
+    "use_push_if_possible" : "on",
     "smart_notification"   : "off",
     "only_away"            : "off",
     "debug"                : "off",
@@ -62,7 +68,8 @@ for option, default_value in settings.items():
         weechat.config_set_plugin(option, default_value)
 
 if weechat.config_get_plugin("apikey") == "":
-    weechat.prnt("", "You haven't set your API key. Use /set plugins.var.python.nma.apikey \"you_nma_api_token\" to fix that.")
+    weechat.prnt("", "You haven't set your API key. Use /set "
+            "plugins.var.python.nma.apikey \"you_nma_api_token\" to fix that.")
 
 
 """
@@ -70,11 +77,13 @@ Hooks
 """
 
 # Hook command
-weechat.hook_command("nma", "Activate NotifyMyAndroid notifications", "on | off",
-                      "on : Activate notifications\n"
-                      "off : Desactivate notifications\n",
-                      "on || off",
-                      "nma_cmd_cb", "");
+weechat.hook_command("nma", "Activate NotifyMyAndroid notifications",
+        "on | off",
+        """    on : Activate notifications
+    off : Deactivate notifications\n
+        """,
+        "on || off",
+        "nma_cmd_cb", "");
 # Hook privmsg/hilights
 weechat.hook_print("", "irc_privmsg", "", 1, "notify_show", "")
 
@@ -124,7 +133,7 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
 
     ret = None
 
-    notif_body = "%s%s%s%s" % (
+    notif_body = u"%s%s%s%s" % (
             weechat.config_get_plugin('nick_separator_left').decode('utf-8'),
             prefix.decode('utf-8'),
             weechat.config_get_plugin('nick_separator_right').decode('utf-8'),
@@ -142,7 +151,7 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
             weechat.config_get_plugin('show_hilights') == "on"):
         bufname = (weechat.buffer_get_string(bufferp, "short_name") or
                 weechat.buffer_get_string(bufferp, "name"))
-        ret = show_notification(bufname, notif_body,
+        ret = show_notification(bufname.decode('utf-8'), notif_body,
                 int(weechat.config_get_plugin("emergency_hilights")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
@@ -151,8 +160,14 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
 
     return weechat.WEECHAT_RC_OK
 
+
 def show_notification(chan, message, priority):
     global p
+    # So far, hardcoded in pynma.py...
+    if weechat.config_get_plugin('use_push_if_possible') == "on":
+        if len(chan) + len(message) < 1021: 
+            chan = "%s - %s" % (chan, message)
+            message = ""
     return p.push("[IRC]", chan, message, '', priority, batch_mode=False)
 
 # vim: autoindent expandtab smarttab shiftwidth=4
