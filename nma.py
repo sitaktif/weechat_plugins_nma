@@ -30,9 +30,9 @@
 # - Do not send my own messages on query channels
 # - Add help on options properly with weechat_config_set_desc_plugin
 
-import weechat
+import weechat as w
 
-weechat.register("nma", "sitaktif", "1.0.4", "GPL2",
+w.register("nma", "sitaktif", "1.0.4", "GPL2",
     "nma: Receive notifications on NotifyMyAndroid app.", "", "")
 
 # script options
@@ -64,11 +64,11 @@ Init
 """
 
 for option, default_value in settings.items():
-    if weechat.config_get_plugin(option) == "":
-        weechat.config_set_plugin(option, default_value)
+    if w.config_get_plugin(option) == "":
+        w.config_set_plugin(option, default_value)
 
-if weechat.config_get_plugin("apikey") == "":
-    weechat.prnt("", "You haven't set your API key. Use /set "
+if w.config_get_plugin("apikey") == "":
+    w.prnt("", "You haven't set your API key. Use /set "
             "plugins.var.python.nma.apikey \"you_nma_api_token\" to fix that.")
 
 
@@ -77,7 +77,7 @@ Hooks
 """
 
 # Hook command
-weechat.hook_command("nma", "Activate NotifyMyAndroid notifications",
+w.hook_command("nma", "Activate NotifyMyAndroid notifications",
         "on | off",
         """    on : Activate notifications
     off : Deactivate notifications\n
@@ -85,11 +85,11 @@ weechat.hook_command("nma", "Activate NotifyMyAndroid notifications",
         "on || off",
         "nma_cmd_cb", "");
 # Hook privmsg/hilights
-weechat.hook_print("", "irc_privmsg", "", 1, "notify_show", "")
+w.hook_print("", "irc_privmsg", "", 1, "notify_show", "")
 
 from pynma import PyNMA
 p = PyNMA()
-p.addkey(weechat.config_get_plugin("apikey"))
+p.addkey(w.config_get_plugin("apikey"))
 
 
 """
@@ -97,8 +97,8 @@ Helpers
 """
 
 def _debug(text):
-    if weechat.config_get_plugin("debug") == "on":
-        weechat.prnt("", text)
+    if w.config_get_plugin("debug") == "on":
+        w.prnt("", text)
 
 
 """
@@ -107,64 +107,64 @@ Functions
 
 def nma_cmd_cb(data, buffer, args):
     if args in ["on", "off"]:
-        weechat.prnt("", "Notify My Android notifications %sactivated"
+        w.prnt("", "Notify My Android notifications %sactivated"
                 % ("de" if args == "off" else ""))
-        weechat.config_set_plugin('activated', args)
+        w.config_set_plugin('activated', args)
     else:
-        weechat.prnt("", "Error: Invalid argument")
-        weechat.command("", "/help nma")
-    return weechat.WEECHAT_RC_OK
+        w.prnt("", "Error: Invalid argument")
+        w.command("", "/help nma")
+    return w.WEECHAT_RC_OK
 
 
 def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
         ishilight, prefix, message):
     """Sends highlighted message to be printed on notification"""
 
-    if weechat.config_get_plugin('activated') == "off":
-        return weechat.WEECHAT_RC_OK
+    if w.config_get_plugin('activated') == "off":
+        return w.WEECHAT_RC_OK
 
-    if (weechat.config_get_plugin('smart_notification') == "on" and
-            bufferp == weechat.current_buffer()):
-        return weechat.WEECHAT_RC_OK
+    if (w.config_get_plugin('smart_notification') == "on" and
+            bufferp == w.current_buffer()):
+        return w.WEECHAT_RC_OK
 
-    if (weechat.config_get_plugin('only_away') == "on" and not
-            weechat.buffer_get_string(bufferp, 'localvar_away')):
-        return weechat.WEECHAT_RC_OK
+    if (w.config_get_plugin('only_away') == "on" and not
+            w.buffer_get_string(bufferp, 'localvar_away')):
+        return w.WEECHAT_RC_OK
 
     ret = None
 
     notif_body = u"%s%s%s%s" % (
-            weechat.config_get_plugin('nick_separator_left').decode('utf-8'),
+            w.config_get_plugin('nick_separator_left').decode('utf-8'),
             prefix.decode('utf-8'),
-            weechat.config_get_plugin('nick_separator_right').decode('utf-8'),
+            w.config_get_plugin('nick_separator_right').decode('utf-8'),
             message.decode('utf-8'))
 
     # PM (query)
-    if (weechat.buffer_get_string(bufferp, "localvar_type") == "private" and
-            weechat.config_get_plugin('show_priv_msg') == "on"):
+    if (w.buffer_get_string(bufferp, "localvar_type") == "private" and
+            w.config_get_plugin('show_priv_msg') == "on"):
         ret = show_notification("IRC private message",
-        notif_body, int(weechat.config_get_plugin("emergency_priv_msg")))
+        notif_body, int(w.config_get_plugin("emergency_priv_msg")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
     # Highlight (your nick is quoted)
     elif (ishilight == "1" and
-            weechat.config_get_plugin('show_hilights') == "on"):
-        bufname = (weechat.buffer_get_string(bufferp, "short_name") or
-                weechat.buffer_get_string(bufferp, "name"))
+            w.config_get_plugin('show_hilights') == "on"):
+        bufname = (w.buffer_get_string(bufferp, "short_name") or
+                w.buffer_get_string(bufferp, "name"))
         ret = show_notification(bufname.decode('utf-8'), notif_body,
-                int(weechat.config_get_plugin("emergency_hilights")))
+                int(w.config_get_plugin("emergency_hilights")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
     if ret is not None:
         _debug(str(ret))
 
-    return weechat.WEECHAT_RC_OK
+    return w.WEECHAT_RC_OK
 
 
 def show_notification(chan, message, priority):
     global p
     # So far, hardcoded in pynma.py...
-    if weechat.config_get_plugin('use_push_if_possible') == "on":
+    if w.config_get_plugin('use_push_if_possible') == "on":
         if len(chan) + len(message) < 1021: 
             chan = "%s - %s" % (chan, message)
             message = ""
