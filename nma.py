@@ -37,18 +37,18 @@ w.register("nma", "sitaktif", "1.0.4", "GPL2",
 
 # script options
 settings = {
-    "apikey"               : "",
-    "nick_separator_left"  : "(",
-    "nick_separator_right" : ") ",
-    "emergency_hilights"   : "-1",
-    "emergency_priv_msg"   : "0",
-    "activated"            : "on",
-    "show_hilights"        : "on",
-    "show_priv_msg"        : "on",
-    "use_push_if_possible" : "on",
-    "smart_notification"   : "off",
-    "only_away"            : "off",
-    "debug"                : "off",
+    "apikey"               : ("",      "Your NMA API key"),
+    "nick_separator_left"  : ("(",     "Left separator for the nick that highlighted you"),
+    "nick_separator_right" : (") ",    "Right separator for the nick that highlighted you"),
+    "emergency_hilights"   : ("-1",    "Emergency of the highlight notifications (-2 is lowest, 2 is highest)"),
+    "emergency_priv_msg"   : ("0",     "Emergency of the query notifications (-2 is lowest, 2 is highest)"),
+    "activated"            : ("on",    "Whether the plugin will send notifications or not"),
+    "notify_hilights"      : ("on",    "Send NMA notifications when you get highlights"),
+    "notify_priv_msg"      : ("on",    "Send NMA notifications when you get a query message"),
+    "use_push_if_possible" : ("on",    "If on, will try to fit the whole message in the title, which is send with the PUSH protocol. This makes you receive queries more quickly."),
+    "smart_notification"   : ("off",   "Don't send notifications if you are focusing the channel (default: off)"),
+    "only_away"            : ("off",   "Only send notifications if you are away"),
+    "debug"                : ("off",   "Print debug messages"),
 }
 
 #severity_t = {
@@ -63,9 +63,11 @@ settings = {
 Init
 """
 
-for option, default_value in settings.items():
+for option, (default_value, description) in settings.items():
     if w.config_get_plugin(option) == "":
         w.config_set_plugin(option, default_value)
+    if description:
+        w.config_set_desc_plugin(option, description)
 
 if w.config_get_plugin("apikey") == "":
     w.prnt("", "You haven't set your API key. Use /set "
@@ -144,14 +146,14 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
 
     # PM (query)
     if (w.buffer_get_string(bufferp, "localvar_type") == "private" and
-            w.config_boolean(w.config_get_plugin('show_priv_msg'))):
+            w.config_boolean(w.config_get_plugin('notify_priv_msg'))):
         ret = send_notification("IRC private message",
         notif_body, int(w.config_get_plugin("emergency_priv_msg")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
     # Highlight (your nick is quoted)
     elif (ishilight == "1" and
-            w.config_boolean(w.config_get_plugin('show_hilights'))):
+            w.config_boolean(w.config_get_plugin('notify_hilights'))):
         bufname = (w.buffer_get_string(bufferp, "short_name") or
                 w.buffer_get_string(bufferp, "name"))
         ret = send_notification(bufname.decode('utf-8'), notif_body,
