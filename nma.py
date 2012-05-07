@@ -52,11 +52,11 @@ settings = {
 }
 
 #severity_t = {
-    #"emergency" : 2,
-    #"high" : 1,
-    #"normal" : 0,
-    #"moderate" : -1,
-    #"low": -2
+#    "emergency" : 2,
+#    "high" : 1,
+#    "normal" : 0,
+#    "moderate" : -1,
+#    "low": -2
 #}
 
 """
@@ -85,7 +85,7 @@ w.hook_command("nma", "Activate NotifyMyAndroid notifications",
         "on || off",
         "nma_cmd_cb", "");
 # Hook privmsg/hilights
-w.hook_print("", "irc_privmsg", "", 1, "notify_show", "")
+w.hook_print("", "irc_privmsg", "", 1, "priv_msg_cb", "")
 
 from pynma import PyNMA
 p = PyNMA()
@@ -97,7 +97,7 @@ Helpers
 """
 
 def _debug(text):
-    if w.config_get_plugin("debug") == "on":
+    if w.config_boolean(w.config_get_plugin("debug")):
         w.prnt("", text)
 
 
@@ -105,29 +105,32 @@ def _debug(text):
 Functions
 """
 
+# /nma command callback. Arguments: "on" or "off"
 def nma_cmd_cb(data, buffer, args):
-    if args in ["on", "off"]:
-        w.prnt("", "Notify My Android notifications %sactivated"
-                % ("de" if args == "off" else ""))
-        w.config_set_plugin('activated', args)
-    else:
+    # TODO: what if the value is not bool-like?
+    # Does it return null?
+    if w.config_boolean(args) is None:
         w.prnt("", "Error: Invalid argument")
         w.command("", "/help nma")
+    else:
+        w.prnt("", "Notify My Android notifications %sactivated"
+                % ("" if w.config_boolean(args) else "de"))
+        w.config_set_plugin('activated', args)
     return w.WEECHAT_RC_OK
 
 
-def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
+def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
         ishilight, prefix, message):
     """Sends highlighted message to be printed on notification"""
 
-    if w.config_get_plugin('activated') == "off":
+    if not w.config_boolean(w.config_get_plugin('activated')):
         return w.WEECHAT_RC_OK
 
-    if (w.config_get_plugin('smart_notification') == "on" and
+    if (w.config_boolean(w.config_get_plugin('smart_notification')) and
             bufferp == w.current_buffer()):
         return w.WEECHAT_RC_OK
 
-    if (w.config_get_plugin('only_away') == "on" and not
+    if (w.config_boolean(w.config_get_plugin('only_away')) and not
             w.buffer_get_string(bufferp, 'localvar_away')):
         return w.WEECHAT_RC_OK
 
@@ -141,17 +144,17 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
 
     # PM (query)
     if (w.buffer_get_string(bufferp, "localvar_type") == "private" and
-            w.config_get_plugin('show_priv_msg') == "on"):
-        ret = show_notification("IRC private message",
+            w.config_boolean(w.config_get_plugin('show_priv_msg'))):
+        ret = send_notification("IRC private message",
         notif_body, int(w.config_get_plugin("emergency_priv_msg")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
     # Highlight (your nick is quoted)
     elif (ishilight == "1" and
-            w.config_get_plugin('show_hilights') == "on"):
+            w.config_boolean(w.config_get_plugin('show_hilights'))):
         bufname = (w.buffer_get_string(bufferp, "short_name") or
                 w.buffer_get_string(bufferp, "name"))
-        ret = show_notification(bufname.decode('utf-8'), notif_body,
+        ret = send_notification(bufname.decode('utf-8'), notif_body,
                 int(w.config_get_plugin("emergency_hilights")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
@@ -161,10 +164,10 @@ def notify_show(data, bufferp, uber_empty, tagsn, isdisplayed,
     return w.WEECHAT_RC_OK
 
 
-def show_notification(chan, message, priority):
+def send_notification(chan, message, priority):
     global p
-    # So far, hardcoded in pynma.py...
-    if w.config_get_plugin('use_push_if_possible') == "on":
+    if w.config_boolean(w.config_get_plugin('use_push_if_possible')):
+        # So far, the length is hardcoded in pynma.py...
         if len(chan) + len(message) < 1021: 
             chan = "%s - %s" % (chan, message)
             message = ""
