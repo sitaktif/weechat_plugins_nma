@@ -107,17 +107,18 @@ def _debug(text):
 Functions
 """
 
-# /nma command callback. Arguments: "on" or "off"
+# /nma command callback. Arguments: bool (on/off)
 def nma_cmd_cb(data, buffer, args):
-    # TODO: what if the value is not bool-like?
-    # Does it return null?
-    if w.config_boolean(args) is None:
-        w.prnt("", "Error: Invalid argument")
-        w.command("", "/help nma")
+    bool_arg = w.config_string_to_boolean(args)
+    status = "%sactivated" % ("" if bool_arg else "de")
+    ret = w.config_set_plugin('activated', args)
+    if ret == w.WEECHAT_CONFIG_OPTION_SET_OK_SAME_VALUE:
+        w.prnt("", "...NMA was already %s" % status)
+    elif ret == w.WEECHAT_CONFIG_OPTION_SET_ERROR:
+        w.prnt("", "Error while setting the config.")
+        return w.WEECHAT_RC_ERROR
     else:
-        w.prnt("", "Notify My Android notifications %sactivated"
-                % ("" if w.config_boolean(args) else "de"))
-        w.config_set_plugin('activated', args)
+        w.prnt("", "Notify My Android notifications %s." % status)
     return w.WEECHAT_RC_OK
 
 
@@ -170,7 +171,7 @@ def send_notification(chan, message, priority):
     global p
     if w.config_boolean(w.config_get_plugin('use_push_if_possible')):
         # So far, the length is hardcoded in pynma.py...
-        if len(chan) + len(message) < 1021: 
+        if len(chan) + len(message) < 1021:
             chan = "%s - %s" % (chan, message)
             message = ""
     return p.push("[IRC]", chan, message, '', priority, batch_mode=False)
