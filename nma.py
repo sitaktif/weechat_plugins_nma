@@ -99,7 +99,7 @@ Helpers
 """
 
 def _debug(text):
-    if w.config_boolean(w.config_get_plugin("debug")):
+    if w.config_string_to_boolean(w.config_get_plugin("debug")):
         w.prnt("", text)
 
 
@@ -126,15 +126,18 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
         ishilight, prefix, message):
     """Sends highlighted message to be printed on notification"""
 
-    if not w.config_boolean(w.config_get_plugin('activated')):
+    if not w.config_string_to_boolean(w.config_get_plugin('activated')):
+        _debug('Plugin not activated. Not sending.')
         return w.WEECHAT_RC_OK
 
-    if (w.config_boolean(w.config_get_plugin('smart_notification')) and
+    if (w.config_string_to_boolean(w.config_get_plugin('smart_notification')) and
             bufferp == w.current_buffer()):
+        _debug('"smart_notification" option set but you are on this buffer already. Not sending.')
         return w.WEECHAT_RC_OK
 
-    if (w.config_boolean(w.config_get_plugin('only_away')) and not
+    if (w.config_string_to_boolean(w.config_get_plugin('only_away')) and not
             w.buffer_get_string(bufferp, 'localvar_away')):
+        _debug('"only_away" option set but you are not away. Not sending.')
         return w.WEECHAT_RC_OK
 
     ret = None
@@ -145,16 +148,18 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
             w.config_get_plugin('nick_separator_right').decode('utf-8'),
             message.decode('utf-8'))
 
+
     # PM (query)
     if (w.buffer_get_string(bufferp, "localvar_type") == "private" and
-            w.config_boolean(w.config_get_plugin('notify_priv_msg'))):
+            w.config_string_to_boolean(w.config_get_plugin('notify_priv_msg'))):
         ret = send_notification("IRC private message",
         notif_body, int(w.config_get_plugin("emergency_priv_msg")))
         _debug("Message sent: %s. Return: %s." % (notif_body, ret))
 
+
     # Highlight (your nick is quoted)
     elif (ishilight == "1" and
-            w.config_boolean(w.config_get_plugin('notify_hilights'))):
+            w.config_string_to_boolean(w.config_get_plugin('notify_hilights'))):
         bufname = (w.buffer_get_string(bufferp, "short_name") or
                 w.buffer_get_string(bufferp, "name"))
         ret = send_notification(bufname.decode('utf-8'), notif_body,
@@ -169,7 +174,7 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
 
 def send_notification(chan, message, priority):
     global p
-    if w.config_boolean(w.config_get_plugin('use_push_if_possible')):
+    if w.config_string_to_boolean(w.config_get_plugin('use_push_if_possible')):
         # So far, the length is hardcoded in pynma.py...
         if len(chan) + len(message) < 1021:
             chan = "%s - %s" % (chan, message)
