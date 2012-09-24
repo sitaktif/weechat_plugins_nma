@@ -30,6 +30,7 @@
 # - Do not send my own messages on query channels
 # - Add help on options properly with weechat_config_set_desc_plugin
 
+import re
 import weechat as w
 
 w.register("nma", "sitaktif", "1.0.4", "GPL2",
@@ -149,8 +150,11 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
             message.decode('utf-8'))
 
 
+    # Check that it's in a "/q" buffer and that I'm not the one writing the msg
+    is_pm = w.buffer_get_string(bufferp, "localvar_type") == "private"
+    is_notify_private = re.search(r'(^|,)notify_private(,|$)', tagsn) is not None
     # PM (query)
-    if (w.buffer_get_string(bufferp, "localvar_type") == "private" and
+    if (is_pm and is_notify_private and
             w.config_string_to_boolean(w.config_get_plugin('notify_priv_msg'))):
         ret = send_notification("IRC private message",
         notif_body, int(w.config_get_plugin("emergency_priv_msg")))
