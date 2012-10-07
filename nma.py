@@ -13,6 +13,9 @@
 #
 # Acknowledgements: Based on lavaramano's script "notify.py" v. 0.0.5 (thanks!)
 #
+# 2012-09-24, sitaktif
+#     version 1.0.5: Do not send a notification when one is *sending* a query
+#     message.
 # 2012-05-06, sitaktif
 #     version 1.0.4: Add an option to send everything in push. Also change
 #     default delimiters with brackets and make lines 80 chars wide.
