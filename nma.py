@@ -4,10 +4,13 @@
 #
 # Requires:
 # Weechat 0.3.0
-# pynma.py (NMA python bindings) - get it on NMA website, on Github as a
-#   standalone or just use https://github.com/sitaktif/weechat_plugins_nma which
-#   includes both nma.py (the weechat script) and pynma.py (the API). Just put
-#   pynma.py it in the same folder as nma.py.
+# pynma.py (NMA python bindings) - This is the python API for NMA.  Take it
+#   from https://raw.github.com/sitaktif/weechat_plugins_nma/master/pynma.py
+#   and put it in the same direactory as nma.py.
+#   Note: the pynma.py script is taken from https://github.com/uskr/pynma and
+#     is not modified. The only reason you should use the one in the weechat
+#     plugin repo (as opposed to the pynma repo) is that you are guaranteed
+#     that pynma.py is at a version that is compatible with the weechat plugin.
 #
 # License: Released under GNU GPL v2
 #
@@ -28,10 +31,6 @@
 #     version 1.0.1: Corrected a bug with debug functions
 # 2011-07-22, sitaktif
 #     version 1.0.0: Initial release
-#
-# Todo:
-# - Do not send my own messages on query channels
-# - Add help on options properly with weechat_config_set_desc_plugin
 
 import re
 import weechat as w
@@ -75,7 +74,8 @@ for option, (default_value, description) in settings.items():
 
 if w.config_get_plugin("apikey") == "":
     w.prnt("", "You haven't set your API key. Use /set "
-            "plugins.var.python.nma.apikey \"you_nma_api_token\" to fix that.")
+            "plugins.var.python.nma.apikey \"you_nma_api_token\" "
+            "and reload the plugin to fix that.")
 
 
 """
@@ -84,11 +84,12 @@ Hooks
 
 # Hook command
 w.hook_command("nma", "Activate NotifyMyAndroid notifications",
-        "on | off",
+        "on | off | test",
         """    on : Activate notifications
-    off : Deactivate notifications\n
+    off : Deactivate notifications
+    test : Test a notification\n
         """,
-        "on || off",
+        "on || off || test",
         "nma_cmd_cb", "");
 # Hook privmsg/hilights
 w.hook_print("", "irc_privmsg", "", 1, "priv_msg_cb", "")
@@ -104,7 +105,7 @@ Helpers
 
 def _debug(text):
     if w.config_string_to_boolean(w.config_get_plugin("debug")):
-        w.prnt("", text)
+        w.prnt("", "[nma] - %s" % text)
 
 
 """
@@ -113,6 +114,13 @@ Functions
 
 # /nma command callback. Arguments: bool (on/off)
 def nma_cmd_cb(data, buffer, args):
+    _debug("Type of args: '%s', args: '%s'" % (type(args), args))
+
+    if args.strip() == "test":
+        send_notification("This is a weechat nma plugin test",
+                "If you receive that, your configuration is ok", 0)
+        return w.WEECHAT_RC_OK
+
     bool_arg = w.config_string_to_boolean(args)
     status = "%sactivated" % ("" if bool_arg else "de")
     ret = w.config_set_plugin('activated', args)
@@ -181,6 +189,8 @@ def priv_msg_cb(data, bufferp, uber_empty, tagsn, isdisplayed,
 
 def send_notification(chan, message, priority):
     global p
+    _debug("Sending notif with chan '%s', message '%s' and priority '%s'." %
+            (chan, message, priority))
     if w.config_string_to_boolean(w.config_get_plugin('use_push_if_possible')):
         # So far, the length is hardcoded in pynma.py...
         if len(chan) + len(message) < 1021:
