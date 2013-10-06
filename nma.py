@@ -16,6 +16,8 @@
 #
 # Acknowledgements: Based on lavaramano's script "notify.py" v. 0.0.5 (thanks!)
 #
+# 2013-10-06, sitaktif
+#     version 1.0.6: Add a "test" action. Take API key config changes dynamically.
 # 2012-09-24, sitaktif
 #     version 1.0.5: Do not send a notification when one is *sending* a query
 #     message.
@@ -35,7 +37,7 @@
 import re
 import weechat as w
 
-w.register("nma", "sitaktif", "1.0.5", "GPL2",
+w.register("nma", "sitaktif", "1.0.6", "GPL2",
     "nma: Receive notifications on NotifyMyAndroid app.", "", "")
 
 # script options
