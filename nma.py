@@ -36,7 +36,7 @@
 import re
 import weechat as w
 
-w.register("nma", "sitaktif", "1.0.4", "GPL2",
+w.register("nma", "sitaktif", "1.0.5", "GPL2",
     "nma: Receive notifications on NotifyMyAndroid app.", "", "")
 
 # script options
